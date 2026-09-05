@@ -118,33 +118,19 @@ export const listTenders = createServerFn({ method: "GET" })
     });
   });
 
-async function loadBids(
-  supabase: {
-    from: (table: string) => {
-      select: (cols: string) => {
-        eq: (
-          col: string,
-          val: string,
-        ) => { order: (c: string, o: { ascending: boolean }) => Promise<{ data: unknown }> } & Promise<{
-          data: unknown;
-        }>;
-        in: (col: string, vals: string[]) => Promise<{ data: unknown }>;
-      };
-    };
-  },
-  tenderId: string,
-): Promise<BidRow[]> {
-  const { data: bids } = await (
-    supabase.from("bids").select("*, vendor:vendors(*)").eq("tender_id", tenderId) as {
-      order: (c: string, o: { ascending: boolean }) => Promise<{ data: unknown }>;
-    }
-  ).order("risk_score", { ascending: false });
+/* eslint-disable @typescript-eslint/no-explicit-any */
+async function loadBids(supabase: any, tenderId: string): Promise<BidRow[]> {
+  const { data: bids } = await supabase
+    .from("bids")
+    .select("*, vendor:vendors(*)")
+    .eq("tender_id", tenderId)
+    .order("risk_score", { ascending: false });
   const rows = (bids ?? []) as (BidRow & { vendor: Vendor })[];
   const ids = rows.map((b) => b.id);
   if (ids.length === 0) return [];
   const [{ data: flags }, { data: decisions }] = await Promise.all([
-    supabase.from("risk_flags").select("*").in("bid_id", ids) as Promise<{ data: unknown }>,
-    supabase.from("decisions").select("*").in("bid_id", ids) as Promise<{ data: unknown }>,
+    supabase.from("risk_flags").select("*").in("bid_id", ids),
+    supabase.from("decisions").select("*").in("bid_id", ids),
   ]);
   const flagList = (flags ?? []) as RiskFlag[];
   const decisionList = (decisions ?? []) as Decision[];
@@ -170,7 +156,7 @@ export const getTenderDetail = createServerFn({ method: "GET" })
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!tender) return null;
-    const bids = await loadBids(supabase as never, data.tenderId);
+    const bids = await loadBids(supabase, data.tenderId);
     return {
       tender: { ...(tender as Tender), estimated_value: Number((tender as Tender).estimated_value) },
       bids,
