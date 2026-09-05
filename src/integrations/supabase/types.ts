@@ -14,16 +14,310 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      audit_events: {
+        Row: {
+          action: string
+          actor_id: string | null
+          actor_label: string
+          created_at: string
+          detail: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          actor_label: string
+          created_at?: string
+          detail?: string
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          actor_label?: string
+          created_at?: string
+          detail?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      bids: {
+        Row: {
+          amount: number
+          created_at: string
+          device_fingerprint: string
+          document_author: string
+          document_hash: string
+          id: string
+          risk_score: number
+          submission_ip: string
+          submitted_at: string
+          tender_id: string
+          vendor_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          device_fingerprint: string
+          document_author: string
+          document_hash: string
+          id?: string
+          risk_score?: number
+          submission_ip: string
+          submitted_at: string
+          tender_id: string
+          vendor_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          device_fingerprint?: string
+          document_author?: string
+          document_hash?: string
+          id?: string
+          risk_score?: number
+          submission_ip?: string
+          submitted_at?: string
+          tender_id?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bids_tender_id_fkey"
+            columns: ["tender_id"]
+            isOneToOne: false
+            referencedRelation: "tenders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bids_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      decisions: {
+        Row: {
+          bid_id: string
+          decided_at: string
+          decided_by: string
+          decision: string
+          id: string
+          rationale: string
+        }
+        Insert: {
+          bid_id: string
+          decided_at?: string
+          decided_by: string
+          decision: string
+          id?: string
+          rationale: string
+        }
+        Update: {
+          bid_id?: string
+          decided_at?: string
+          decided_by?: string
+          decision?: string
+          id?: string
+          rationale?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "decisions_bid_id_fkey"
+            columns: ["bid_id"]
+            isOneToOne: false
+            referencedRelation: "bids"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          full_name: string | null
+          id: string
+          organisation: string | null
+        }
+        Insert: {
+          created_at?: string
+          full_name?: string | null
+          id: string
+          organisation?: string | null
+        }
+        Update: {
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          organisation?: string | null
+        }
+        Relationships: []
+      }
+      risk_flags: {
+        Row: {
+          bid_id: string
+          code: string
+          created_at: string
+          id: string
+          rationale: string
+          score: number
+          severity: string
+          source: string
+          title: string
+        }
+        Insert: {
+          bid_id: string
+          code: string
+          created_at?: string
+          id?: string
+          rationale: string
+          score?: number
+          severity: string
+          source?: string
+          title: string
+        }
+        Update: {
+          bid_id?: string
+          code?: string
+          created_at?: string
+          id?: string
+          rationale?: string
+          score?: number
+          severity?: string
+          source?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risk_flags_bid_id_fkey"
+            columns: ["bid_id"]
+            isOneToOne: false
+            referencedRelation: "bids"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenders: {
+        Row: {
+          buyer: string
+          category: string
+          closes_at: string
+          created_at: string
+          currency: string
+          estimated_value: number
+          id: string
+          reference: string
+          status: string
+          title: string
+        }
+        Insert: {
+          buyer: string
+          category: string
+          closes_at: string
+          created_at?: string
+          currency?: string
+          estimated_value: number
+          id?: string
+          reference: string
+          status?: string
+          title: string
+        }
+        Update: {
+          buyer?: string
+          category?: string
+          closes_at?: string
+          created_at?: string
+          currency?: string
+          estimated_value?: number
+          id?: string
+          reference?: string
+          status?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      vendors: {
+        Row: {
+          address: string
+          bank_fingerprint: string
+          contact_email: string
+          contact_phone: string
+          country: string
+          created_at: string
+          id: string
+          incorporated_on: string
+          name: string
+          registration_no: string
+        }
+        Insert: {
+          address: string
+          bank_fingerprint: string
+          contact_email: string
+          contact_phone: string
+          country: string
+          created_at?: string
+          id?: string
+          incorporated_on: string
+          name: string
+          registration_no: string
+        }
+        Update: {
+          address?: string
+          bank_fingerprint?: string
+          contact_email?: string
+          contact_phone?: string
+          country?: string
+          created_at?: string
+          id?: string
+          incorporated_on?: string
+          name?: string
+          registration_no?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "reviewer" | "viewer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +444,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "reviewer", "viewer"],
+    },
   },
 } as const
