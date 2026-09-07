@@ -175,7 +175,7 @@ export const getBidDetail = createServerFn({ method: "GET" })
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!bid) return null;
-    const row = bid as BidRow & { tender: Tender };
+    const row = bid as unknown as BidRow & { tender: Tender };
     const [{ data: flags }, { data: decisions }, { data: siblings }] = await Promise.all([
       supabase.from("risk_flags").select("*").eq("bid_id", row.id),
       supabase.from("decisions").select("*").eq("bid_id", row.id),
@@ -296,7 +296,7 @@ export const runAiAssist = createServerFn({ method: "POST" })
       .eq("id", data.bidId)
       .maybeSingle();
     if (!bid) throw new Error("Bid not found.");
-    const row = bid as BidRow & { tender: Tender };
+    const row = bid as unknown as BidRow & { tender: Tender };
     const { data: flags } = await supabase.from("risk_flags").select("*").eq("bid_id", row.id);
 
     const evidence = {
