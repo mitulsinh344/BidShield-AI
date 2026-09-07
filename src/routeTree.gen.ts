@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedAuditRouteImport } from './routes/_authenticated/audit'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedBidsBidIdRouteImport } from './routes/_authenticated/bids.$bidId'
 import { Route as AuthenticatedTendersTenderIdRouteImport } from './routes/_authenticated/tenders.$tenderId'
 
 const IndexRoute = IndexRouteImport.update({
@@ -40,6 +41,11 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedBidsBidIdRoute = AuthenticatedBidsBidIdRouteImport.update({
+  id: '/bids/$bidId',
+  path: '/bids/$bidId',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedTendersTenderIdRoute =
   AuthenticatedTendersTenderIdRouteImport.update({
     id: '/tenders/$tenderId',
@@ -52,6 +58,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/audit': typeof AuthenticatedAuditRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/bids/$bidId': typeof AuthenticatedBidsBidIdRoute
   '/tenders/$tenderId': typeof AuthenticatedTendersTenderIdRoute
 }
 export interface FileRoutesByTo {
@@ -59,6 +66,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/audit': typeof AuthenticatedAuditRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/bids/$bidId': typeof AuthenticatedBidsBidIdRoute
   '/tenders/$tenderId': typeof AuthenticatedTendersTenderIdRoute
 }
 export interface FileRoutesById {
@@ -68,13 +76,26 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/audit': typeof AuthenticatedAuditRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/bids/$bidId': typeof AuthenticatedBidsBidIdRoute
   '/_authenticated/tenders/$tenderId': typeof AuthenticatedTendersTenderIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/audit' | '/dashboard' | '/tenders/$tenderId'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/audit'
+    | '/dashboard'
+    | '/bids/$bidId'
+    | '/tenders/$tenderId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/audit' | '/dashboard' | '/tenders/$tenderId'
+  to:
+    | '/'
+    | '/auth'
+    | '/audit'
+    | '/dashboard'
+    | '/bids/$bidId'
+    | '/tenders/$tenderId'
   id:
     | '__root__'
     | '/'
@@ -82,6 +103,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/audit'
     | '/_authenticated/dashboard'
+    | '/_authenticated/bids/$bidId'
     | '/_authenticated/tenders/$tenderId'
   fileRoutesById: FileRoutesById
 }
@@ -128,6 +150,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/bids/$bidId': {
+      id: '/_authenticated/bids/$bidId'
+      path: '/bids/$bidId'
+      fullPath: '/bids/$bidId'
+      preLoaderRoute: typeof AuthenticatedBidsBidIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/tenders/$tenderId': {
       id: '/_authenticated/tenders/$tenderId'
       path: '/tenders/$tenderId'
@@ -141,12 +170,14 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAuditRoute: typeof AuthenticatedAuditRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedBidsBidIdRoute: typeof AuthenticatedBidsBidIdRoute
   AuthenticatedTendersTenderIdRoute: typeof AuthenticatedTendersTenderIdRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAuditRoute: AuthenticatedAuditRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedBidsBidIdRoute: AuthenticatedBidsBidIdRoute,
   AuthenticatedTendersTenderIdRoute: AuthenticatedTendersTenderIdRoute,
 }
 

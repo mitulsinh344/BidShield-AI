@@ -175,7 +175,7 @@ export const getBidDetail = createServerFn({ method: "GET" })
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!bid) return null;
-    const row = bid as BidRow & { tender: Tender };
+    const row = bid as unknown as BidRow & { tender: Tender };
     const [{ data: flags }, { data: decisions }, { data: siblings }] = await Promise.all([
       supabase.from("risk_flags").select("*").eq("bid_id", row.id),
       supabase.from("decisions").select("*").eq("bid_id", row.id),
@@ -296,13 +296,13 @@ export const runAiAssist = createServerFn({ method: "POST" })
       .eq("id", data.bidId)
       .maybeSingle();
     if (!bid) throw new Error("Bid not found.");
-    const row = bid as BidRow & { tender: Tender };
+    const row = bid as unknown as BidRow & { tender: Tender };
     const { data: flags } = await supabase.from("risk_flags").select("*").eq("bid_id", row.id);
 
     const evidence = {
       tender: { reference: row.tender.reference, title: row.tender.title },
       bidder: row.vendor.name,
-      amount: row.amount,
+      amount: `${row.tender.currency} ${row.amount}`,
       submitted_at: row.submitted_at,
       signals: ((flags ?? []) as RiskFlag[]).map((f) => ({
         title: f.title,
@@ -321,7 +321,7 @@ export const runAiAssist = createServerFn({ method: "POST" })
           method: "POST",
           headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
           body: JSON.stringify({
-            model: "google/gemini-3.7-flash",
+            model: "openai/gpt-6-astra",
             messages: [
               {
                 role: "system",
