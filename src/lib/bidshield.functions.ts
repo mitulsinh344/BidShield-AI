@@ -302,7 +302,7 @@ export const runAiAssist = createServerFn({ method: "POST" })
     const evidence = {
       tender: { reference: row.tender.reference, title: row.tender.title },
       bidder: row.vendor.name,
-      amount: row.amount,
+      amount: `${row.tender.currency} ${row.amount}`,
       submitted_at: row.submitted_at,
       signals: ((flags ?? []) as RiskFlag[]).map((f) => ({
         title: f.title,
