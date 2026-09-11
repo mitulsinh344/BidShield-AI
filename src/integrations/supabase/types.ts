@@ -819,10 +819,6 @@ export type Database = {
         Args: { _perm: string; _user_id: string }
         Returns: boolean
       }
-      has_permission_unused_placeholder: {
-        Args: { _perm: string; _user_id: string }
-        Returns: boolean
-      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
