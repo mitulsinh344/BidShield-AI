@@ -168,19 +168,18 @@ export const getViewer = createServerFn({ method: "GET" })
     const roleList = (roles ?? []).map((r: any) => r.role as string);
 
     let permissions: string[] = [];
+    let ownPermissions: string[] = [];
     if (roleList.length) {
       const { data: perms } = await supabase
         .from("role_permissions")
         .select("permission_code, scope")
         .in("role", roleList);
-      permissions = [...new Set((perms ?? []).map((p: any) => p.permission_code as string))];
+      const rows = (perms ?? []) as any[];
+      // Only 'all' scope grants platform-wide access; 'own' scope is limited to
+      // the signed-in party's own records and is enforced by row-level security.
+      permissions = [...new Set(rows.filter((p) => p.scope === "all").map((p) => p.permission_code as string))];
+      ownPermissions = [...new Set(rows.filter((p) => p.scope === "own").map((p) => p.permission_code as string))];
     }
-    const scoped = new Set(
-      roleList.length
-        ? []
-        : [],
-    );
-    void scoped;
 
     const primaryRole = roleList[0] ?? null;
     const p: any = profile ?? {};
@@ -199,6 +198,7 @@ export const getViewer = createServerFn({ method: "GET" })
       roles: roleList,
       role: primaryRole,
       permissions,
+      ownPermissions,
       isBidder: primaryRole === "bidder",
       canDecide: permissions.includes("decision.make"),
     };
