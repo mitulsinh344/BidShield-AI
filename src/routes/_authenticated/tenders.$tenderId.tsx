@@ -1,132 +1,160 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+
 import { getTenderDetail } from "@/lib/bidshield.functions";
-import { RiskBadge, ScoreMeter } from "@/components/bidshield/RiskBadge";
-import { AdvisoryNotice } from "@/components/bidshield/DemoBanner";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Guard } from "@/components/bidshield/Guard";
+import {
+  EmptyState,
+  ErrorState,
+  EvidenceRow,
+  LoadingRows,
+  PageHeader,
+  RiskPill,
+  ScoreBar,
+  SectionCard,
+  StatusBadge,
+  TableShell,
+  Td,
+  Th,
+  formatDate,
+  formatDay,
+  formatMoney,
+} from "@/components/bidshield/ui";
 
 export const Route = createFileRoute("/_authenticated/tenders/$tenderId")({
   head: () => ({
     meta: [
-      { title: "Tender bid comparison — BidShield AI" },
-      {
-        name: "description",
-        content:
-          "Compare every bid on a tender side by side with its risk score, linked bidders and review status.",
-      },
-      { property: "og:title", content: "Tender bid comparison — BidShield AI" },
-      {
-        property: "og:description",
-        content: "Every bid on this tender with its advisory risk signals and review status.",
-      },
+      { title: "Tender detail | BidShield AI" },
+      { name: "description", content: "Tender requirements, submitted bids and evaluation progress." },
+      { property: "og:title", content: "Tender detail | BidShield AI" },
+      { property: "og:description", content: "Tender requirements, submitted bids and evaluation progress." },
+      { property: "og:type", content: "article" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: TenderDetail,
+  component: () => (
+    <Guard permission="tender.view">
+      <TenderDetail />
+    </Guard>
+  ),
 });
-
-const money = (v: number, c: string) =>
-  new Intl.NumberFormat("en-IE", { style: "currency", currency: c, maximumFractionDigits: 0 }).format(
-    v,
-  );
-
-const band = (s: number) => (s >= 60 ? "high" : s >= 30 ? "medium" : "low");
 
 function TenderDetail() {
   const { tenderId } = Route.useParams();
-  const fetchTender = useServerFn(getTenderDetail);
-  const q = useQuery({
+  const fn = useServerFn(getTenderDetail);
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["tender", tenderId],
-    queryFn: () => fetchTender({ data: { tenderId } }),
+    queryFn: () => fn({ data: { tenderId } }),
   });
 
-  if (q.isLoading) return <Skeleton className="h-96 w-full" />;
-  if (q.isError)
-    return (
-      <p className="rounded-md border border-destructive/40 bg-destructive/10 p-4 text-sm">
-        Could not load this tender.
-      </p>
-    );
-  if (!q.data) return <p className="text-sm text-muted-foreground">Tender not found.</p>;
+  if (isLoading) return <LoadingRows rows={6} />;
+  if (isError) return <ErrorState message={(error as Error).message} onRetry={() => refetch()} />;
+  if (!data) return <EmptyState title="Tender not found" description="It may have been withdrawn." />;
 
-  const { tender, bids } = q.data;
+  const { tender, bids, requirements } = data;
 
   return (
-    <div className="space-y-8">
-      <div>
-        <Link to="/dashboard" className="text-sm text-muted-foreground hover:text-foreground">
-          ← Screening queue
-        </Link>
-        <span className="mt-4 block font-mono text-xs uppercase tracking-widest text-muted-foreground">
-          {tender.reference}
-        </span>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight">{tender.title}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {tender.buyer} · {tender.category} · estimate{" "}
-          {money(tender.estimated_value, tender.currency)} · closes{" "}
-          {new Date(tender.closes_at).toLocaleString("en-GB")}
-        </p>
-        <AdvisoryNotice className="mt-3" />
+    <>
+      <PageHeader
+        title={tender.title}
+        subtitle={`${tender.reference} · ${tender.buyer}`}
+        breadcrumbs={[
+          { label: "Home", to: "/dashboard" },
+          { label: "Tenders", to: "/tenders" },
+          { label: tender.reference },
+        ]}
+        actions={<StatusBadge value={tender.status} />}
+      />
+
+      <div className="grid gap-4 xl:grid-cols-3">
+        <SectionCard title="Tender particulars" className="xl:col-span-1">
+          <EvidenceRow label="Department" value={tender.department} />
+          <EvidenceRow label="Category" value={tender.category} />
+          <EvidenceRow label="Estimated value" value={formatMoney(tender.estimated_value, tender.currency)} />
+          <EvidenceRow label="Closing date" value={formatDay(tender.closes_at)} />
+          <EvidenceRow label="Submissions" value={bids.length} />
+          <p className="mt-3 border-t border-border pt-3 text-sm text-muted-foreground">{tender.description}</p>
+        </SectionCard>
+
+        <SectionCard title="Eligibility requirements" className="xl:col-span-2">
+          {requirements.length === 0 ? (
+            <EmptyState title="No requirements configured" />
+          ) : (
+            <TableShell>
+              <thead>
+                <tr>
+                  <Th>Code</Th>
+                  <Th>Requirement</Th>
+                  <Th>Expected value</Th>
+                  <Th>Mandatory</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {requirements.map((r: any) => (
+                  <tr key={r.id}>
+                    <Td className="font-mono text-xs">{r.code}</Td>
+                    <Td>{r.title}</Td>
+                    <Td className="text-muted-foreground">{r.expected_value}</Td>
+                    <Td>{r.mandatory ? "Yes" : "No"}</Td>
+                  </tr>
+                ))}
+              </tbody>
+            </TableShell>
+          )}
+        </SectionCard>
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-border">
-        <table className="w-full text-sm">
-          <thead className="bg-secondary/60 text-left font-mono text-xs uppercase tracking-wider text-muted-foreground">
-            <tr>
-              <th className="px-4 py-3">Bidder</th>
-              <th className="px-4 py-3">Bid amount</th>
-              <th className="px-4 py-3">Risk score</th>
-              <th className="px-4 py-3">Top signals</th>
-              <th className="px-4 py-3">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {bids.map((b) => (
-              <tr key={b.id} className="border-t border-border align-top hover:bg-secondary/30">
-                <td className="px-4 py-4">
-                  <Link
-                    to="/bids/$bidId"
-                    params={{ bidId: b.id }}
-                    className="font-medium underline-offset-4 hover:underline"
-                  >
-                    {b.vendor.name}
-                  </Link>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    {b.vendor.country} · {b.vendor.registration_no}
-                  </p>
-                </td>
-                <td className="px-4 py-4 font-mono tabular-nums">
-                  {money(b.amount, tender.currency)}
-                </td>
-                <td className="px-4 py-4">
-                  <ScoreMeter score={b.risk_score} />
-                </td>
-                <td className="px-4 py-4">
-                  <div className="flex max-w-xs flex-wrap gap-1.5">
-                    {b.flags.slice(0, 3).map((f) => (
-                      <RiskBadge key={f.id} severity={f.severity}>
-                        {f.title}
-                      </RiskBadge>
-                    ))}
-                    {b.flags.length === 0 && (
-                      <span className="text-xs text-muted-foreground">No signals</span>
-                    )}
-                  </div>
-                </td>
-                <td className="px-4 py-4">
-                  {b.decision ? (
-                    <RiskBadge severity={b.decision.decision === "qualify" ? "low" : "high"}>
-                      {b.decision.decision}
-                    </RiskBadge>
-                  ) : (
-                    <RiskBadge severity={band(b.risk_score)}>Awaiting review</RiskBadge>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="mt-4">
+        <SectionCard title="Submitted bids" description="Ranked by rule-engine risk score.">
+          {bids.length === 0 ? (
+            <EmptyState title="No bids submitted yet" />
+          ) : (
+            <TableShell>
+              <thead>
+                <tr>
+                  <Th>Bid ID</Th>
+                  <Th>Bidder</Th>
+                  <Th>Amount</Th>
+                  <Th>Submitted</Th>
+                  <Th>Compliance</Th>
+                  <Th>Risk</Th>
+                  <Th>Verification</Th>
+                  <Th>Status</Th>
+                  <Th>Decision</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {bids.map((b) => (
+                  <tr key={b.id} className="hover:bg-muted/50">
+                    <Td>
+                      <Link to="/bids/$bidId" params={{ bidId: b.id }} className="font-medium text-primary hover:underline">
+                        {b.bid_code ?? "—"}
+                      </Link>
+                    </Td>
+                    <Td>{b.vendor.name}</Td>
+                    <Td className="whitespace-nowrap tabular-nums">{formatMoney(b.amount, tender.currency)}</Td>
+                    <Td className="whitespace-nowrap text-muted-foreground">{formatDate(b.submitted_at)}</Td>
+                    <Td>
+                      <ScoreBar score={b.compliance_score} />
+                    </Td>
+                    <Td>
+                      <RiskPill score={b.risk_score} />
+                    </Td>
+                    <Td>
+                      <StatusBadge value={b.verification_status} />
+                    </Td>
+                    <Td>
+                      <StatusBadge value={b.status} />
+                    </Td>
+                    <Td>{b.decision ? <StatusBadge value={b.decision.decision} /> : <span className="text-xs text-muted-foreground">Pending officer</span>}</Td>
+                  </tr>
+                ))}
+              </tbody>
+            </TableShell>
+          )}
+        </SectionCard>
       </div>
-    </div>
+    </>
   );
 }
