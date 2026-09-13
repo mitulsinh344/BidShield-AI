@@ -428,12 +428,6 @@ export const getBidWorkspace = createServerFn({ method: "GET" })
     if (!bid) return null;
     const row = bid as any;
 
-    const { data: permRows } = await supabase
-      .from("role_permissions")
-      .select("permission_code, role, user_roles!inner(user_id)")
-      .limit(0);
-    void permRows;
-
     const [
       { data: flags },
       { data: decisions },
@@ -487,9 +481,6 @@ export const getBidWorkspace = createServerFn({ method: "GET" })
         sharedDevice: s.device_fingerprint === row.device_fingerprint,
         sharedDocument: s.document_hash === row.document_hash,
       }));
-
-    const requirementOrder = ["REQ-PAN", "REQ-GST", "REQ-UDYAM", "REQ-ITR", "REQ-TURNOVER", "REQ-OEM", "REQ-LC"];
-    void requirementOrder;
 
     const isOwner = row.vendor?.owner_user_id === userId;
 
@@ -729,6 +720,7 @@ export const listPermissionMatrix = createServerFn({ method: "GET" })
 export const listOrganizations = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    await ensure(context, "user.view");
     const { data } = await context.supabase.from("organizations").select("*").order("name");
     return (data ?? []) as any[];
   });
@@ -736,6 +728,7 @@ export const listOrganizations = createServerFn({ method: "GET" })
 export const getSystemConfig = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    await ensure(context, "system.configure");
     const { data } = await context.supabase.from("system_config").select("*").order("category");
     return (data ?? []) as any[];
   });
@@ -775,6 +768,7 @@ export const updateSystemConfig = createServerFn({ method: "POST" })
 export const listVerificationSources = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    await ensure(context, "system.configure");
     const { data } = await context.supabase.from("verification_sources").select("*").order("name");
     return (data ?? []) as any[];
   });
@@ -950,3 +944,72 @@ function fallbackSummary(evidence: {
     : "• No rule-based risk signals were raised for this submission.";
   return `Compliance observations for ${evidence.bidder}:\n${complianceLines}\n\nRisk signals:\n${signalLines}\n\nSuggested checks for the officer: confirm the extracted values against the source documents, re-run any verification source that returned pending, and seek clarification from the bidder where a document is missing.\n\nAdvisory only — the qualification decision rests with the human reviewer.`;
 }
+
+/* =========================================================
+ * Bidder portal — own records only.
+ * No permission gate is used here: the bidder's own vendor record is
+ * resolved from the session and row-level security restricts every read.
+ * ======================================================= */
+export const getBidderPortal = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    const { data: vendor } = await supabase
+      .from("vendors")
+      .select("*")
+      .eq("owner_user_id", userId)
+      .maybeSingle();
+    if (!vendor) {
+      return { vendor: null, bids: [], documents: [], requirements: [], compliance: [], verifications: [] };
+    }
+    const { data: bids } = await supabase
+      .from("bids")
+      .select("*, tender:tenders(id, reference, title, closes_at, status)")
+      .eq("vendor_id", (vendor as any).id)
+      .order("submitted_at", { ascending: false });
+    const bidRows = (bids ?? []) as any[];
+    const ids = bidRows.map((b) => b.id);
+    const tenderIds = [...new Set(bidRows.map((b) => b.tender_id))];
+
+    const [{ data: documents }, { data: requirements }, { data: compliance }, { data: verifications }] =
+      await Promise.all([
+        ids.length
+          ? supabase.from("documents").select("*").in("bid_id", ids).order("doc_type")
+          : Promise.resolve({ data: [] as any[] }),
+        tenderIds.length
+          ? supabase.from("tender_requirements").select("*").in("tender_id", tenderIds).order("sort_order")
+          : Promise.resolve({ data: [] as any[] }),
+        ids.length
+          ? supabase
+              .from("compliance_checks")
+              .select("bid_id, requirement_title, expected_value, detected_value, result, verification_status")
+              .in("bid_id", ids)
+          : Promise.resolve({ data: [] as any[] }),
+        ids.length
+          ? supabase.from("verification_results").select("*").in("bid_id", ids)
+          : Promise.resolve({ data: [] as any[] }),
+      ]);
+
+    return {
+      vendor: {
+        ...(vendor as any),
+        annual_turnover: (vendor as any).annual_turnover ? Number((vendor as any).annual_turnover) : null,
+      },
+      // Internal risk scoring and officer notes are intentionally excluded.
+      bids: bidRows.map((b) => ({
+        id: b.id as string,
+        bidCode: (b.bid_code as string) ?? "—",
+        amount: Number(b.amount),
+        submittedAt: b.submitted_at as string,
+        status: b.status as string,
+        verificationStatus: b.verification_status as string,
+        tenderRef: b.tender?.reference ?? "—",
+        tenderTitle: b.tender?.title ?? "—",
+        tenderId: b.tender?.id ?? b.tender_id,
+      })),
+      documents: (documents ?? []) as any[],
+      requirements: (requirements ?? []) as any[],
+      compliance: (compliance ?? []) as any[],
+      verifications: (verifications ?? []) as any[],
+    };
+  });
