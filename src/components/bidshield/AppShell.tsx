@@ -28,7 +28,7 @@ import {
 
 import { supabase } from "@/integrations/supabase/client";
 import { useViewer } from "@/lib/useViewer";
-import { OPERATIONS_NAV, ADMIN_NAV, BOTTOM_NAV, roleLabel, type NavItem } from "@/lib/rbac";
+import { OPERATIONS_NAV, ADMIN_NAV, BIDDER_NAV, BOTTOM_NAV, roleLabel, type NavItem } from "@/lib/rbac";
 import { listNotifications, markNotificationRead } from "@/lib/bidshield.functions";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -104,8 +104,8 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   const allowed = (item: NavItem) =>
     item.permission === null || Boolean(viewer?.permissions.includes(item.permission));
-  const operations = OPERATIONS_NAV.filter(allowed);
-  const administration = ADMIN_NAV.filter(allowed);
+  const operations = viewer?.isBidder ? BIDDER_NAV : OPERATIONS_NAV.filter(allowed);
+  const administration = viewer?.isBidder ? [] : ADMIN_NAV.filter(allowed);
 
   async function signOut() {
     await queryClient.cancelQueries();
@@ -139,7 +139,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
           <nav className="flex-1 overflow-y-auto px-2 py-3" aria-label="Main navigation">
             <p className="px-2.5 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Operations
+              {viewer?.isBidder ? "Bidder Portal" : "Operations"}
             </p>
             <div className="space-y-0.5">
               {operations.map((item) => (

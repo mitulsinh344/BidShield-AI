@@ -69,6 +69,14 @@ export const ADMIN_NAV: NavItem[] = [
   { to: "/admin/ai", label: "AI Configuration", permission: "system.configure", icon: "sparkles" },
 ];
 
+/** Bidders only ever see their own records; these routes are ownership-scoped. */
+export const BIDDER_NAV: NavItem[] = [
+  { to: "/bidder", label: "My Portal", permission: null, icon: "gauge" },
+  { to: "/bidder/bids", label: "My Bids", permission: null, icon: "files" },
+  { to: "/bidder/documents", label: "My Documents", permission: null, icon: "file" },
+  { to: "/bidder/requirements", label: "Requirements", permission: null, icon: "clipboard" },
+];
+
 export const BOTTOM_NAV: NavItem[] = [
   { to: "/settings", label: "Settings", permission: null, icon: "settings" },
   { to: "/profile", label: "Profile", permission: null, icon: "user" },
